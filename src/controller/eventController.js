@@ -1,6 +1,21 @@
 
 const moduleEVENT = require('../model/event');
 const {validateRequiredFields} = require("../middleware/validatorApi");
+const nodemailer = require('nodemailer');
+
+
+
+async function createTransporter()
+{
+    return nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        auth: {
+            user: 'genesis.gulgowski45@ethereal.email',
+            pass: 'nk1N72hJyRZXFnBH33'
+        }
+    });
+}
 
 const EventController =
 {
@@ -13,7 +28,8 @@ const EventController =
             requiredFields = ['name', 'duration', 'date_time', 'participants'];
             const validation = validateRequiredFields(req.body, requiredFields);
 
-            if (!validation.success) {
+            if (!validation.success)
+            {
                 res.status(400).json({message: validation.message, missingFields: validation.missingFields});
                 return;
             }
@@ -30,16 +46,35 @@ const EventController =
                 return res.status(400).json({ message: 'bad error' });
             }
 
-            if (newEvent && newEvent.event_id) {
-                // Generar las rotaciones
+            if (newEvent && newEvent.event_id)
+            {
                 const rotaciones = generateRotations(participants, duration, date_time); // Agregar date_time
 
-                // Devolver la respuesta con las rotaciones
-                return res.status(201).json({
-                    message: 'Event created successfully',
-                    event_id: newEvent.event_id,
-                    rotations: rotaciones
-                });
+                if (rotaciones && rotaciones.length > 0)
+                {
+                    const transporter = await createTransporter();
+
+                    for (const participant of participants) {
+                        let mailOptions = {
+                            from: `"Event Organizer" <${transporter.options.auth.user}>`,
+                            to: participant.email,
+                            subject: `Welcome to the ${name} Event!`,
+                            text: `Hello ${participant.name},\n\nYour participation in the event "${name}" has been confirmed!\n\nEvent Date: ${date_time}\nDuration: ${duration} minutes\n\nBest regards,\nEvent Organizer`
+                        };
+
+                        await transporter.sendMail(mailOptions);
+                    }
+
+                    return res.status(201).json({
+                        message: 'Event created successfully and emails sent',
+                        event_id: newEvent.event_id,
+                        rotations: rotaciones
+                    });
+                }
+                else
+                {
+                    return res.status(500).json({ message: 'Error generating rotations' });
+                }
             }
             else {
                 return res.status(500).json({ message: 'Error creating event' });
@@ -84,8 +119,7 @@ function generateRotations(participants, duration, date_time) {
             };
             round.push(pair);
         }
-
-        // Asignar la hora de inicio a la ronda actual (corregido)
+        
         const roundStartTime = new Date(eventStartTime.getTime() + i * roundDuration * 60000);
         round.push({ startTime: roundStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
 
