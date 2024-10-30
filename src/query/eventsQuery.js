@@ -39,6 +39,23 @@ const EventsQuery =
         event_id = $1
     AND 
         participant_email = $2
+    `,
+
+
+
+    SELECT_MATCHES:
+    `
+    SELECT
+        LEAST(v1.voter_email, v1.voted_email) AS email1,
+        GREATEST(v1.voter_email, v1.voted_email) AS email2
+        FROM
+            votes v1
+        JOIN
+            votes v2 ON v1.voter_email = v2.voted_email AND v1.voted_email = v2.voter_email
+    WHERE
+        v1.event_id = $1
+    GROUP BY
+        email1, email2;  
     `
 }
 

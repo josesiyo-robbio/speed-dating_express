@@ -70,6 +70,26 @@ const Event =
             console.error('Error:', error);
             throw error;
         }
+    },
+
+
+    select_matches : async(event_id) =>
+    {
+        try
+        {
+            const result = await moduleDB.manyOrNone({
+                text : moduleEVENTSQUERY.SELECT_MATCHES,
+                values : [event_id],
+                rowMode : 'json'
+            });
+            console.log(result);
+            return result;
+        }
+        catch (error)
+        {
+            console.error('Error:', error);
+            throw error;
+        }
     }
 
 

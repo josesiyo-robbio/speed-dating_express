@@ -134,8 +134,32 @@ const EventController =
             console.error('Error:', error);
             res.status(500).json({ message: 'Error registering vote', error: { message: error.message } });
         }
-    }
+    },
 
+
+     getMatchesForEvent : async (req, res) =>
+     {
+        try
+        {
+            const { event_id } = req.body;
+            const matches = await moduleEVENT.select_matches(event_id);
+
+            const formattedMatches = matches.map((match, index) =>
+            {
+                return `MATCH ${index + 1}: ${match.email1} - ${match.email2}`;
+            });
+
+            return res.status(200).json({
+                message: 'Matches retrieved successfully',
+                matches: formattedMatches
+            });
+        }
+        catch (error)
+        {
+            console.error('Error fetching matches:', error);
+            res.status(500).json({ message: 'Error retrieving matches', error: { message: error.message } });
+        }
+    },
 
 }
 
