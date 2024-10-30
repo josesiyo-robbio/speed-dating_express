@@ -53,6 +53,27 @@ const Event =
 
 
 
+    select_participant : async (event_id,participant_email) =>
+    {
+        try
+        {
+            const result = await moduleDB.oneOrNone({
+                text : moduleEVENTSQUERY.SELECT_PARTICIPANT,
+                values : [event_id,participant_email],
+                rowMode : 'json'
+            });
+            console.log(result);
+            return result;
+        }
+        catch (error)
+        {
+            console.error('Error:', error);
+            throw error;
+        }
+    }
+
+
+
 
 }
 

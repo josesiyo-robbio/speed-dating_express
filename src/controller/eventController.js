@@ -95,12 +95,10 @@ const EventController =
 
     createNewVote: async (req, res) =>
     {
-        try
-        {
-            const authHeader = req.headers.authorization;
-            if (!authHeader || !authHeader.startsWith('Bearer '))
-            {
-                return res.status(401).json({ message: 'Token missing or invalid' });
+        try {
+                const authHeader = req.headers.authorization;
+                if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                    return res.status(401).json({ message: 'Token missing or invalid' });
             }
             const token = authHeader.split(' ')[1];
 
@@ -114,13 +112,22 @@ const EventController =
                 return res.status(400).json({ message: 'voted_email is required' });
             }
 
-            const newVote = await moduleEVENT.insert_new_vote(voter_email, voted_email, event_id);
+            const validEmailVoted = await moduleEVENT.select_participant(event_id, voted_email);
 
-            return res.status(201).json
-            ({
-                message: 'Vote registered successfully',
-                event_id: newVote.event_id
-            });
+            if (validEmailVoted && voted_email !== voter_email)
+            {
+                const newVote = await moduleEVENT.insert_new_vote(voter_email, voted_email, event_id);
+
+                return res.status(201).json({
+                    message: 'Vote registered successfully',
+                    event_id: newVote.event_id
+                });
+            }
+            else
+            {
+                return res.status(400).json({ message: 'Error creating vote: participant not found in this event or cannot vote for yourself' });
+            }
+
         }
         catch (error)
         {
@@ -128,6 +135,7 @@ const EventController =
             res.status(500).json({ message: 'Error registering vote', error: { message: error.message } });
         }
     }
+
 
 }
 
