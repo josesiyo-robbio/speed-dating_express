@@ -28,7 +28,31 @@ const Event =
             console.error('Error:', error);
             throw error;
         }
-    }
+    },
+
+
+    insert_new_vote : async (voter_email, voted_email,event_id) =>
+    {
+        try
+        {
+            const result = moduleDB.one({
+            text : moduleEVENTSQUERY.INSERT_VOTE,
+            values : [voter_email, voted_email,event_id],
+            rowMode : 'json'
+        });
+            console.log(result);
+            return result;
+        }
+        catch (error)
+        {
+            console.error('Error:', error);
+            throw error;
+        }
+
+    },
+
+
+
 
 }
 

@@ -90,6 +90,43 @@ const EventController =
             res.status(500).json({ message: 'Error', error: { message: error.message } });
         }
 
+    },
+
+
+    createNewVote: async (req, res) =>
+    {
+        try
+        {
+            const authHeader = req.headers.authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer '))
+            {
+                return res.status(401).json({ message: 'Token missing or invalid' });
+            }
+            const token = authHeader.split(' ')[1];
+
+            const decoded = jwt.verify(token, SECRET_KEY);
+            const voter_email = decoded.email;
+            const event_id = decoded.event_id;
+
+            const { voted_email } = req.body;
+            if (!voted_email)
+            {
+                return res.status(400).json({ message: 'voted_email is required' });
+            }
+
+            const newVote = await moduleEVENT.insert_new_vote(voter_email, voted_email, event_id);
+
+            return res.status(201).json
+            ({
+                message: 'Vote registered successfully',
+                event_id: newVote.event_id
+            });
+        }
+        catch (error)
+        {
+            console.error('Error:', error);
+            res.status(500).json({ message: 'Error registering vote', error: { message: error.message } });
+        }
     }
 
 }
