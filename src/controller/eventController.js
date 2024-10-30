@@ -2,7 +2,8 @@
 const moduleEVENT = require('../model/event');
 const {validateRequiredFields} = require("../middleware/validatorApi");
 const nodemailer = require('nodemailer');
-
+const jwt = require('jsonwebtoken');
+const SECRET_KEY = process.env.SECRET_KEY;
 
 
 async function createTransporter()
@@ -54,12 +55,14 @@ const EventController =
                 {
                     const transporter = await createTransporter();
 
-                    for (const participant of participants) {
+                    for (const participant of participants)
+                    {
+                        const token = jwt.sign({ email: participant.email, event_id: newEvent.event_id }, SECRET_KEY, { expiresIn: '3h' });
                         let mailOptions = {
                             from: `"Event Organizer" <${transporter.options.auth.user}>`,
                             to: participant.email,
                             subject: `Welcome to the ${name} Event!`,
-                            text: `Hello ${participant.name},\n\nYour participation in the event "${name}" has been confirmed!\n\nEvent Date: ${date_time}\nDuration: ${duration} minutes\n\nBest regards,\nEvent Organizer`
+                            text: `Hello ${participant.name},\n\nYour participation in the event "${name}" has been confirmed!\n\nEvent Date: ${date_time}\nDuration: ${duration} minutes\n\nAccess Token: ${token}\n\nBest regards,\nEvent Organizer`
                         };
 
                         await transporter.sendMail(mailOptions);
@@ -119,7 +122,7 @@ function generateRotations(participants, duration, date_time) {
             };
             round.push(pair);
         }
-        
+
         const roundStartTime = new Date(eventStartTime.getTime() + i * roundDuration * 60000);
         round.push({ startTime: roundStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
 
