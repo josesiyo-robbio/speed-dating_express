@@ -3,9 +3,8 @@
 
 const moduleEVENT = require('../model/event');
 const {validateRequiredFields} = require("../middleware/validatorApi");
-const jwt = require('jsonwebtoken');
-const SECRET_KEY = process.env.SECRET_KEY;
 const {sendWelcomeEmails}       =   require('../service/mailService');
+const {generateRotations} = require('../service/rotationsService');
 
 
 
@@ -43,7 +42,11 @@ const EventController =
 
             await sendWelcomeEmails(name,participants,newEvent,date_time,duration);
     
-            return res.status(201).json({message: 'Event created successfully and emails sent',});
+            return res.status(201).json({
+                message: 'Event created successfully and emails sent',
+                event_id: newEvent.event_id,
+                rotations: rotaciones
+            });
         } 
         catch (error) 
         {
@@ -139,46 +142,6 @@ const EventController =
         }
     },
 
-}
-
-
-
-function generateRotations(participants, duration, date_time) 
-{
-    let men = participants.filter(p => p.gender === 'male');
-    let women = participants.filter(p => p.gender === 'female');
-
-    // Equilibrar los grupos agregando "rest"
-    while (men.length < women.length) {
-        men.push({ name: 'rest', gender: 'male' });
-    }
-    while (women.length < men.length) {
-        women.push({ name: 'rest', gender: 'female' });
-    }
-
-    const numRounds = men.length; // o women.length, ya que son iguales
-
-    const rotations = [];
-    const eventStartTime = new Date(date_time);
-    const roundDuration = duration / numRounds;
-
-    for (let i = 0; i < numRounds; i++) {
-        const round = [];
-        for (let j = 0; j < numRounds; j++) {
-            const pair = {
-                man: men[j].name,
-                woman: women[(j + i) % numRounds].name
-            };
-            round.push(pair);
-        }
-
-        const roundStartTime = new Date(eventStartTime.getTime() + i * roundDuration * 60000);
-        round.push({ startTime: roundStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
-
-        rotations.push(round);
-    }
-
-    return rotations;
 }
 
 
