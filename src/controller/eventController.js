@@ -95,9 +95,11 @@ const EventController =
 
     createNewVote: async (req, res) =>
     {
-        try {
-                const authHeader = req.headers.authorization;
-                if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        try 
+        {
+            const authHeader = req.headers.authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) 
+                    {
                     return res.status(401).json({ message: 'Token missing or invalid' });
             }
             const token = authHeader.split(' ')[1];
