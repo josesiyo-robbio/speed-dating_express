@@ -51,67 +51,82 @@ const EventController =
             return res.status(500).json({ message: 'Error', error: { message: error.message } });
         }
     },
-    
 
 
-    createNewVote: async (req, res) =>
+
+    createNewVote: async (req, res) => 
     {
+        const { voted_email }   =   req.body;
+        const requiredFields    =   ['voted_email'];
+    
+        const validation = validateRequiredFields(req.body, requiredFields);
+        if (!validation.success) 
+        {
+            return res.status(400).json({ message: validation.message, missingFields: validation.missingFields });
+        }
+    
+        if (!voted_email || typeof voted_email !== 'string') 
+        {
+            return res.status(400).json({ message: 'Invalid voted_email provided' });
+        }
+    
         try 
         {
-            const authHeader = req.headers.authorization;
-            if (!authHeader || !authHeader.startsWith('Bearer ')) 
-                    {
-                    return res.status(401).json({ message: 'Token missing or invalid' });
-            }
-            const token = authHeader.split(' ')[1];
-
-            const decoded = jwt.verify(token, SECRET_KEY);
-            const voter_email = decoded.email;
-            const event_id = decoded.event_id;
-
-            const { voted_email } = req.body;
-            if (!voted_email)
-            {
-                return res.status(400).json({ message: 'voted_email is required' });
-            }
-
+            const { event_id, email: voter_email } = req.user;
+    
             const validEmailVoted = await moduleEVENT.select_participant(event_id, voted_email);
-
-            if (validEmailVoted && voted_email !== voter_email)
+            if (!validEmailVoted) 
             {
-                const newVote = await moduleEVENT.insert_new_vote(voter_email, voted_email, event_id);
-
-                return res.status(201).json({
-                    message: 'Vote registered successfully',
-                    event_id: newVote.event_id
-                });
+                return res.status(400).json({ message: 'Error creating vote: participant not found in this event' });
             }
-            else
+    
+            if (voted_email === voter_email) 
             {
-                return res.status(400).json({ message: 'Error creating vote: participant not found in this event or cannot vote for yourself' });
+                return res.status(400).json({ message: 'Error creating vote: you cannot vote for yourself' });
             }
-
-        }
-        catch (error)
+    
+            const newVote = await moduleEVENT.insert_new_vote(voter_email, voted_email, event_id);
+    
+            return res.status(201).json({
+                message: 'Vote registered successfully',
+                event_id: newVote.event_id
+            });
+        } 
+        catch (error) 
         {
             console.error('Error:', error);
-            res.status(500).json({ message: 'Error registering vote', error: { message: error.message } });
+            return res.status(500).json({ message: 'Error registering vote', error: { message: error.message } });
         }
     },
 
 
-     getMatchesForEvent : async (req, res) =>
-     {
+
+    getMatchesForEvent : async (req, res) =>
+    {
+        const { event_id }      =   req.body;
+        const requiredFields    =   ['event_id'];
+    
+        const validation = validateRequiredFields(req.body, requiredFields);
+        if (!validation.success) 
+        {
+            return res.status(400).json({ message: validation.message, missingFields: validation.missingFields });
+        }
+
         try
         {
-            const { event_id } = req.body;
             const matches = await moduleEVENT.select_matches(event_id);
-
-            const formattedMatches = matches.map((match, index) =>
+        
+            if (!matches || matches.length === 0) 
             {
-                return `MATCH ${index + 1}: ${match.email1} - ${match.email2}`;
-            });
-
+                return res.status(404).json({ message: 'No matches found for this event' });
+            }
+    
+            const formattedMatches = matches.map((match, index) => ({
+                matchNumber     :   index + 1,
+                participant1    :   match.email1,
+                participant2    :   match.email2
+            }));
+    
             return res.status(200).json({
                 message: 'Matches retrieved successfully',
                 matches: formattedMatches
@@ -120,14 +135,16 @@ const EventController =
         catch (error)
         {
             console.error('Error fetching matches:', error);
-            res.status(500).json({ message: 'Error retrieving matches', error: { message: error.message } });
+            return res.status(500).json({ message: 'Error retrieving matches', error: { message: error.message } });
         }
     },
 
 }
 
 
-function generateRotations(participants, duration, date_time) {
+
+function generateRotations(participants, duration, date_time) 
+{
     let men = participants.filter(p => p.gender === 'male');
     let women = participants.filter(p => p.gender === 'female');
 
