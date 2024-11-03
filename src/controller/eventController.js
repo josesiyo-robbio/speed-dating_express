@@ -1,96 +1,57 @@
 
+
+
 const moduleEVENT = require('../model/event');
 const {validateRequiredFields} = require("../middleware/validatorApi");
-const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const SECRET_KEY = process.env.SECRET_KEY;
+const {sendWelcomeEmails}       =   require('../service/mailService');
 
 
-async function createTransporter()
-{
-    return nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        auth: {
-            user: 'genesis.gulgowski45@ethereal.email',
-            pass: 'nk1N72hJyRZXFnBH33'
-        }
-    });
-}
 
 const EventController =
 {
-    createNew : async (req, res) =>
+    createNew: async (req, res) => 
     {
-        try
+        const requiredFields = ['name', 'duration', 'date_time', 'participants'];
+        const validation = validateRequiredFields(req.body, requiredFields);
+        if (!validation.success) 
         {
-            let requiredFields;
-            const { name, duration, date_time, participants } = req.body;
-            requiredFields = ['name', 'duration', 'date_time', 'participants'];
-            const validation = validateRequiredFields(req.body, requiredFields);
-
-            if (!validation.success)
+            return res.status(400).json({message: validation.message,missingFields: validation.missingFields});
+        }
+    
+        const { name, duration, date_time, participants } = req.body;
+    
+        if (!Array.isArray(participants) || participants.length === 0) 
+        {
+            return res.status(400).json({ message: 'Participants must be a non-empty array' });
+        }
+    
+        try 
+        {
+            const newEvent = await moduleEVENT.insert_new(name, duration, date_time, participants);
+            if (!newEvent || !newEvent.event_id) 
             {
-                res.status(400).json({message: validation.message, missingFields: validation.missingFields});
-                return;
-            }
-
-            if(!Array.isArray(participants) || participants.length === 0)
-            {
-                return res.status(400).json({ message: 'Participants must be a non-empty array' });
-            }
-
-            const newEvent = await moduleEVENT.insert_new( name, duration, date_time, participants);
-
-            if(!newEvent)
-            {
-                return res.status(400).json({ message: 'bad error' });
-            }
-
-            if (newEvent && newEvent.event_id)
-            {
-                const rotaciones = generateRotations(participants, duration, date_time); // Agregar date_time
-
-                if (rotaciones && rotaciones.length > 0)
-                {
-                    const transporter = await createTransporter();
-
-                    for (const participant of participants)
-                    {
-                        const token = jwt.sign({ email: participant.email, event_id: newEvent.event_id }, SECRET_KEY, { expiresIn: '3h' });
-                        let mailOptions = {
-                            from: `"Event Organizer" <${transporter.options.auth.user}>`,
-                            to: participant.email,
-                            subject: `Welcome to the ${name} Event!`,
-                            text: `Hello ${participant.name},\n\nYour participation in the event "${name}" has been confirmed!\n\nEvent Date: ${date_time}\nDuration: ${duration} minutes\n\nAccess Token: ${token}\n\nBest regards,\nEvent Organizer`
-                        };
-
-                        await transporter.sendMail(mailOptions);
-                    }
-
-                    return res.status(201).json({
-                        message: 'Event created successfully and emails sent',
-                        event_id: newEvent.event_id,
-                        rotations: rotaciones
-                    });
-                }
-                else
-                {
-                    return res.status(500).json({ message: 'Error generating rotations' });
-                }
-            }
-            else {
                 return res.status(500).json({ message: 'Error creating event' });
             }
+    
+            const rotaciones = generateRotations(participants, duration, date_time);
+            if (!rotaciones || rotaciones.length === 0) 
+            {
+                return res.status(500).json({ message: 'Error generating rotations' });
+            }
 
-        }
-        catch (error)
+            await sendWelcomeEmails(name,participants,newEvent,date_time,duration);
+    
+            return res.status(201).json({message: 'Event created successfully and emails sent',});
+        } 
+        catch (error) 
         {
-            console.log(error);
-            res.status(500).json({ message: 'Error', error: { message: error.message } });
+            console.error(error);
+            return res.status(500).json({ message: 'Error', error: { message: error.message } });
         }
-
     },
+    
 
 
     createNewVote: async (req, res) =>
