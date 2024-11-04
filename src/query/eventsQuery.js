@@ -30,6 +30,7 @@ const EventsQuery =
     RETURNING event_id;
     `,
 
+
     SELECT_PARTICIPANT:
     `SELECT 
         participant_email
@@ -40,7 +41,6 @@ const EventsQuery =
     AND 
         participant_email = $2
     `,
-
 
 
     SELECT_MATCHES:
