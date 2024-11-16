@@ -1,5 +1,5 @@
 
-# Speed Dating API
+# Speed Dating 
 
 ## Overview
 A RESTful API built with Express.js for organizing speed dating events. Users can create new events, vote on potential matches, and retrieve the list of matches after the event. This system includes authentication for voting actions and emails for event participants.
